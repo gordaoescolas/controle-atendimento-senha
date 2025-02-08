@@ -30,7 +30,7 @@ pip install -r requirements.txt
 
 1. Inicie o servidor:
 ```bash
-pip install -r requirements.txt
+python app.py
 ```
 2. Acesse as interfaces:
 - Emissão de senhas: http://localhost/
