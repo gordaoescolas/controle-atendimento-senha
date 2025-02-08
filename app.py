@@ -120,4 +120,4 @@ def get_remaining():
     return jsonify({'remaining': sum(len(q['queue']) for q in queues.values())})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port='80', debug=True)
+    app.run(host="0.0.0.0", port=5030, debug=False)
