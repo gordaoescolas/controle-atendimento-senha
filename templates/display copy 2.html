@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Atendimento</title>
+    <style>
+        :root {
+            --primary-color: #00ff88;
+            --background-color: #1a1a2e;
+            --secondary-color: #16213e;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: var(--background-color);
+            color: var(--primary-color);
+            font-family: 'Segoe UI', system-ui;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #content {
+            flex: 1;
+        }
+
+        iframe {
+            width: 100%;
+            height: 360px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 15px var(--primary-color);
+        }
+
+        .main-display {
+            background: var(--secondary-color);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
+            width: 80%;
+            max-width: 800px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .main-display::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                var(--primary-color),
+                transparent
+            );
+            animation: glow 6s infinite;
+            opacity: 0.1;
+        }
+
+        @keyframes glow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .current-ticket {
+            font-size: 8em;
+            margin: 30px 0;
+            letter-spacing: 15px;
+            text-shadow: 0 0 20px var(--primary-color);
+            animation: pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+
+        .guiche-info {
+            font-size: 3em;
+            margin: 20px 0;
+            color: #ffffff;
+        }
+
+        .guiche-number {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .history {
+            margin-top: 50px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .history-title {
+            font-size: 1.5em;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+        }
+
+        .history-list {
+            list-style: none;
+            padding: 0;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            font-size: 1.2em;
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .sound-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .sound-btn {
+            background: var(--primary-color);
+            color: var(--background-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .sound-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px var(--primary-color);
+        }
+
+        @media (max-width: 768px) {
+            .current-ticket {
+                font-size: 4em;
+            }
+            
+            .guiche-info {
+                font-size: 2em;
+            }
+        }
+
+        .container {
+        display: flex;
+        }
+
+        .painel-senhas {
+            flex: 1;
+        }
+
+        .video-container {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="painel-senhas">
+            <!-- Conteúdo do painel de senhas -->
+            ...
+        </div>
+        <div class="video-container">
+            <video controls>
+                <source src="caminho/do/video.mp4" type="video/mp4">
+                Seu navegador não suporta o elemento de vídeo.
+            </video>
+        </div>
+    </div>
+    <div id="content">
+        <div class="header">
+            <h1>Sistema de Atendimento</h1>
+            <p>Última atualização: <span id="last-update">--:--:--</span></p>
+        </div>
+
+        <div class="main-display">
+            <div class="current-ticket" id="display">----</div>
+            <div class="guiche-info">
+                Dirija-se ao<br>
+                <span class="guiche-number" id="guiche">--</span>
+            </div>
+        </div>
+
+        <div class="history">
+            <div class="history-title">Histórico de Chamadas</div>
+            <ul class="history-list" id="history"></ul>
+        </div>
+
+        <div class="sound-controls">
+            <button class="sound-btn" onclick="testSound()">Testar Som</button>
+            <button class="sound-btn" onclick="toggleSound()">🔇 Silenciar</button>
+        </div>
+
+        <audio id="alertSound" src="{{ url_for('static', filename='sounds/alert.mp3') }}"></audio>
+    </div>
+
+    <script>
+        const audio = document.getElementById('alertSound');
+        let soundEnabled = false;
+        let isMuted = false;
+        const maxHistory = 10;
+        const historyList = document.getElementById('history');
+
+        function updateHistory(ticket, guiche) {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+            li.innerHTML = `
+                <span>${ticket}</span>
+                <span>Guichê: ${guiche}</span>
+                <span>${new Date().toLocaleTimeString()}</span>
+            `;
+            
+            historyList.prepend(li);
+            
+            // Mantém apenas as últimas entradas
+            if (historyList.children.length > maxHistory) {
+                historyList.removeChild(historyList.lastChild);
+            }
+        }
+
+        function testSound() {
+            audio.play().then(() => {
+                soundEnabled = true;
+                alert('Som funcionando corretamente!');
+            }).catch(() => {
+                alert('Permita o áudio para ouvir as notificações!');
+            });
+        }
+
+        function toggleSound() {
+            isMuted = !isMuted;
+            audio.muted = isMuted;
+            document.querySelector('.sound-btn:nth-child(2)').textContent = isMuted ? '🔈 Som' : '🔇 Silenciar';
+        }
+
+        const eventSource = new EventSource('/stream');
+        
+        eventSource.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                
+                // Animação
+                document.getElementById('display').style.animation = 'pulse 0.5s';
+                setTimeout(() => {
+                    document.getElementById('display').style.animation = '';
+                }, 500);
+
+                // Atualiza display
+                document.getElementById('display').textContent = data.ticket;
+                document.getElementById('guiche').textContent = data.guiche;
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+
+                // Atualiza histórico
+                updateHistory(data.ticket, data.guiche);
+
+                // Tocar som
+                if (soundEnabled && !isMuted) {
+                    audio.play();
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+            }
+        };
+
+        // Ativar som ao clicar na página
+        document.addEventListener('click', () => {
+            if (!soundEnabled) {
+                audio.play().then(() => {
+                    soundEnabled = true;
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Emissão de Senhas</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #f0f0f0;
+        }
+        .container {
+            text-align: center;
+        }
+        button {
+            padding: 30px 60px;
+            margin: 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        #normalBtn {
+            background: #007bff;
+            color: white;
+        }
+        #preferencialBtn {
+            background: #28a745;
+            color: white;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button id="normalBtn" onclick="emitTicket('normal')">
+            Normal
+        </button>
+        <button id="preferencialBtn" onclick="emitTicket('preferencial')">
+            Preferencial
+        </button>
+    </div>
+
+    <script>
+        async function emitTicket(type) {
+            try {
+                const response = await fetch('/emit', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ type: type })
+                });
+                const data = await response.json();
+                alert(`Senha ${data.ticket} emitida com sucesso!`);
+            } catch (error) {
+                alert('Erro ao emitir senha: ' + error.message);
+            }
+        }
+
+        let printer = null;
+
+        // Função para conectar à impressora
+        async function connectPrinter() {
+            try {
+                const device = await navigator.usb.requestDevice({
+                    filters: [{ vendorId: 0x0123 }] // Ajuste o vendorId conforme sua impressora
+                });
+                await device.open();
+                printer = device;
+                return true;
+            } catch (error) {
+                console.error('Erro ao conectar impressora:', error);
+                return false;
+            }
+        }
+
+        // Função para imprimir a senha
+        async function printTicket(ticketNumber, type) {
+            const content = [
+                '\x1B\x40',          // Inicializar impressora
+                '\x1B\x61\x01',      // Centralizar texto
+                '\n\n',
+                'SENHA\n',
+                `${ticketNumber}\n`,
+                `Tipo: ${type}\n`,
+                `Data: ${new Date().toLocaleString()}\n`,
+                '\n\n\n\n\x1B\x69'   // Cortar papel
+            ].join('');
+
+            const encoder = new TextEncoder();
+            const data = encoder.encode(content);
+            await printer.transferOut(1, data);
+        }
+
+        // Função modificada para emitir e imprimir
+        async function emitTicket(type) {
+            try {
+                if (!printer) {
+                    await connectPrinter();
+                }
+
+                const response = await fetch('/emit', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ type: type })
+                });
+                const data = await response.json();
+                
+                if (printer) {
+                    await printTicket(data.ticket, type);
+                }
+                
+                alert(`Senha ${data.ticket} emitida com sucesso!`);
+            } catch (error) {
+                alert('Erro ao emitir senha: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
